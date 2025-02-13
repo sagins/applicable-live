@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Oku ve Yüksel</title>
+
+  <!-- Google Fonts: Roboto for general text and Scheherazade New for Arabic -->
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&family=Scheherazade+New&display=swap" rel="stylesheet">
+
+  <style>
+    /* Global Styles */
+    body {
+      margin: 0;
+      padding: 0;
+      /* We set the base font size to 14px for the entire page */
+      font-size: 14px;
+      font-family: 'Roboto', sans-serif;
+      color: #333;
+      background: linear-gradient(135deg, #f3ec78, #af4261);
+    }
+
+    .container {
+      max-width: 800px;
+      margin: 50px auto;
+      background: rgba(255, 255, 255, 0.95);
+      padding: 30px;
+      border-radius: 15px;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 20px;
+      font-size: 16px; /* Slightly larger than 14px for headings */
+    }
+
+    /* Arabic verse styling */
+    .arabic-verse {
+      font-family: 'Scheherazade New', serif;
+      font-size: 22px; /* Same base size, but you can increase if you want the Arabic more prominent */
+      text-align: center;
+      margin-bottom: 20px;
+      direction: rtl; /* Ensures right-to-left text alignment */
+    }
+
+    /* Turkish translation styling */
+    .turkish-translation {
+      font-size: 16px;
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    /* Applicable principle styling */
+    .principle {
+      font-size: 16px;
+      line-height: 1.6;
+      margin-top: 30px;
+      padding: 20px;
+      background: #f9f9f9;
+      border-left: 6px solid #007BFF;
+      border-radius: 5px;
+    }
+
+    /* Button styling */
+    .btn {
+      display: block;
+      margin: 20px auto;
+      padding: 10px 20px;
+      font-size: 14px;
+      background-color: #007BFF;
+      color: #fff;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+
+    .btn:hover {
+      background-color: #0056b3;
+    }
+
+    .loading {
+      text-align: center;
+      font-size: 14px;
+      margin-bottom: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Ayetler ve Uygulanabilir Prensipler</h1>
+    <button class="btn" id="randomAyetBtn">Tefeül Çek</button>
+    <div id="content">
+      <div class="loading" id="loadingMessage" style="display: none;">Yükleniyor...</div>
+      <div class="arabic-verse" id="arabicVerse"></div>
+      <div class="turkish-translation" id="turkishTranslation"></div>
+      <div class="principle" id="applicablePrinciple"></div>
+    </div>
+  </div>
+
+  <script>
+    let principlesData = {};
+
+    // Load applicable principles from an external JSON file.
+    function loadPrinciples() {
+      fetch('principles.json', { cache: 'no-cache' })
+        .then(response => response.json())
+        .then(data => {
+          principlesData = data;
+        })
+        .catch(err => {
+          console.error('İlkeler yüklenirken hata oluştu:', err);
+        });
+    }
+
+    // Fetch a random ayah from the set that has applicable principles.
+    function getRandomAyah() {
+      const keys = Object.keys(principlesData);
+      if (keys.length === 0) {
+        document.getElementById('arabicVerse').innerText = "Herhangi bir ilke bulunamadı. Lütfen principles.json dosyanızı kontrol ediniz.";
+        return;
+      }
+
+      // Pick a random key (e.g., "2:255")
+      const randomIndex = Math.floor(Math.random() * keys.length);
+      const principleKey = keys[randomIndex];
+      
+      // Build the API URL using the key format (e.g., "2:255")
+      const apiUrl = `https://api.alquran.cloud/v1/ayah/${principleKey}/editions/quran-uthmani,tr.ozturk`;
+      
+      // Show a loading message while fetching data.
+      document.getElementById('loadingMessage').style.display = 'block';
+      document.getElementById('arabicVerse').innerText = '';
+      document.getElementById('turkishTranslation').innerText = '';
+      document.getElementById('applicablePrinciple').innerText = '';
+
+      fetch(apiUrl)
+        .then(response => response.json())
+        .then(data => {
+          if (data.code === 200 && data.data && data.data.length === 2) {
+            let arabicText = '';
+            let turkishText = '';
+
+            // Process each edition from the returned data.
+            data.data.forEach(edition => {
+              if (edition.edition.identifier === "quran-uthmani") {
+                arabicText = edition.text;
+              }
+              if (edition.edition.identifier === "tr.ozturk") {
+                turkishText = edition.text;
+              }
+            });
+
+            document.getElementById('arabicVerse').innerText = arabicText;
+            document.getElementById('turkishTranslation').innerText = turkishText;
+            // Display the applicable principle from the JSON
+            document.getElementById('applicablePrinciple').innerText = principlesData[principleKey];
+          } else {
+            document.getElementById('arabicVerse').innerText = "Ayet alınamadı.";
+          }
+        })
+        .catch(error => {
+          console.error('API hatası:', error);
+          document.getElementById('arabicVerse').innerText = "Ayet alınırken hata oluştu.";
+        })
+        .finally(() => {
+          document.getElementById('loadingMessage').style.display = 'none';
+        });
+    }
+
+    // Set up the button event and load principles on page load.
+    document.getElementById('randomAyetBtn').addEventListener('click', getRandomAyah);
+    loadPrinciples();
+  </script>
+</body>
+</html>
