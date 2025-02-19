@@ -42,7 +42,7 @@
       text-align: center;
       margin-bottom: 20px;
       direction: rtl; /* Right-to-left text alignment */
-      white-space: pre-wrap; /* Allows wrapping without forcing line breaks */
+      white-space: pre-wrap; /* Preserve text wrapping if needed */
     }
 
     /* Turkish translation styling */
@@ -50,7 +50,7 @@
       font-size: 16px;
       text-align: center;
       margin-bottom: 20px;
-      white-space: pre-wrap; /* Preserve newlines for separate ayahs */
+      white-space: pre-wrap; /* We will join lines with a space, so no forced newlines */
     }
 
     /* Applicable principle styling */
@@ -149,31 +149,29 @@
 
           results.forEach(result => {
             if (result.code === 200 && result.data && result.data.length === 2) {
-              // Each result has two editions: Arabic (uthmani) and Turkish (ozturk)
               let arabicVerse = '';
               let turkishVerse = '';
 
               result.data.forEach(edition => {
                 if (edition.edition.identifier === "quran-uthmani") {
-                  // Add the Arabic text as-is (the verse end symbols are included).
-                  arabicVerse = edition.text;
+                  // Append the end-of-verse symbol (۝) after each Arabic verse
+                  arabicVerse = edition.text.trim() + " ۝";
                 }
                 if (edition.edition.identifier === "tr.ozturk") {
-                  turkishVerse = edition.text;
+                  turkishVerse = edition.text.trim();
                 }
               });
 
-              // Push them to arrays for combining later.
               arabicTexts.push(arabicVerse);
               turkishTexts.push(turkishVerse);
             }
           });
 
-          // Join all Arabic verses in one line with a space, so they appear continuous.
+          // Join Arabic verses with a space so they form one continuous text
           const combinedArabic = arabicTexts.join(' ');
 
-          // Join Turkish verses with a blank line so each ayah's translation is separate.
-          const combinedTurkish = turkishTexts.join('\n\n');
+          // Join Turkish verses with a space so they appear continuously
+          const combinedTurkish = turkishTexts.join(' ');
 
           document.getElementById('arabicVerse').innerText = combinedArabic;
           document.getElementById('turkishTranslation').innerText = combinedTurkish;
