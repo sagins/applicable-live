@@ -39,7 +39,7 @@
     /* Arabic verse styling */
     .arabic-verse {
       font-family: 'Scheherazade New', serif;
-      font-size: 22px; /* Same base size, but you can increase if you want the Arabic more prominent */
+      font-size: 22px; /* Increase if you want the Arabic more prominent */
       text-align: center;
       margin-bottom: 20px;
       direction: rtl; /* Ensures right-to-left text alignment */
@@ -101,9 +101,9 @@
   </div>
 
   <script>
-    let principlesData = {};
+    let principlesData = [];
 
-    // Load applicable principles from an external JSON file.
+    // Load applicable principle groups from an external JSON file.
     function loadPrinciples() {
       fetch('principles.json', { cache: 'no-cache' })
         .then(response => response.json())
@@ -115,51 +115,61 @@
         });
     }
 
-    // Fetch a random ayah from the set that has applicable principles.
-    function getRandomAyah() {
-      const keys = Object.keys(principlesData);
-      if (keys.length === 0) {
+    // Fetch verses for a single ayah.
+    function fetchAyah(surah, ayah) {
+      const ayahId = `${surah}:${ayah}`;
+      const apiUrl = `https://api.alquran.cloud/v1/ayah/${ayahId}/editions/quran-uthmani,tr.ozturk`;
+      return fetch(apiUrl).then(response => response.json());
+    }
+
+    // Fetch a random group of ayahs with their applicable principle.
+    function getRandomGroup() {
+      if (!principlesData || principlesData.length === 0) {
         document.getElementById('arabicVerse').innerText = "Herhangi bir ilke bulunamadı. Lütfen principles.json dosyanızı kontrol ediniz.";
         return;
       }
-
-      // Pick a random key (e.g., "2:255")
-      const randomIndex = Math.floor(Math.random() * keys.length);
-      const principleKey = keys[randomIndex];
       
-      // Build the API URL using the key format (e.g., "2:255")
-      const apiUrl = `https://api.alquran.cloud/v1/ayah/${principleKey}/editions/quran-uthmani,tr.ozturk`;
+      // Pick a random group from the array.
+      const randomIndex = Math.floor(Math.random() * principlesData.length);
+      const group = principlesData[randomIndex];
       
-      // Show a loading message while fetching data.
+      // Show loading message.
       document.getElementById('loadingMessage').style.display = 'block';
       document.getElementById('arabicVerse').innerText = '';
       document.getElementById('turkishTranslation').innerText = '';
       document.getElementById('applicablePrinciple').innerText = '';
-
-      fetch(apiUrl)
-        .then(response => response.json())
-        .then(data => {
-          if (data.code === 200 && data.data && data.data.length === 2) {
-            let arabicText = '';
-            let turkishText = '';
-
-            // Process each edition from the returned data.
-            data.data.forEach(edition => {
-              if (edition.edition.identifier === "quran-uthmani") {
-                arabicText = edition.text;
-              }
-              if (edition.edition.identifier === "tr.ozturk") {
-                turkishText = edition.text;
-              }
-            });
-
-            document.getElementById('arabicVerse').innerText = arabicText;
-            document.getElementById('turkishTranslation').innerText = turkishText;
-            // Display the applicable principle from the JSON
-            document.getElementById('applicablePrinciple').innerText = principlesData[principleKey];
-          } else {
-            document.getElementById('arabicVerse').innerText = "Ayet alınamadı.";
-          }
+      
+      // For each ayah in the group, fetch its data.
+      const apiCalls = group.ayahs.map(ayah => fetchAyah(group.surah, ayah));
+      
+      Promise.all(apiCalls)
+        .then(results => {
+          let arabicTexts = [];
+          let turkishTexts = [];
+          
+          // Loop over each result to extract texts.
+          results.forEach(result => {
+            if (result.code === 200 && result.data && result.data.length === 2) {
+              result.data.forEach(edition => {
+                if (edition.edition.identifier === "quran-uthmani") {
+                  arabicTexts.push(edition.text);
+                }
+                if (edition.edition.identifier === "tr.ozturk") {
+                  turkishTexts.push(edition.text);
+                }
+              });
+            }
+          });
+          
+          // Combine the texts for display.
+          const combinedArabic = arabicTexts.join("\n\n");
+          const combinedTurkish = turkishTexts.join("\n\n");
+          const ayahDisplay = group.ayahs.join(", ");
+          
+          // Display the surah and ayahs along with the texts.
+          document.getElementById('arabicVerse').innerText = `Surah ${group.surah}, Ayahs ${ayahDisplay}:\n\n${combinedArabic}`;
+          document.getElementById('turkishTranslation').innerText = combinedTurkish;
+          document.getElementById('applicablePrinciple').innerText = group.principle;
         })
         .catch(error => {
           console.error('API hatası:', error);
@@ -171,25 +181,23 @@
     }
 
     // Set up the button event and load principles on page load.
-    document.getElementById('randomAyetBtn').addEventListener('click', getRandomAyah);
+    document.getElementById('randomAyetBtn').addEventListener('click', getRandomGroup);
     loadPrinciples();
   </script>
 
   <footer style="
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  width: 100%;
-  text-align: center;
-  font-family: 'gwendolyn';
-  font-size: 14px;
-  padding: 10px 0;
-  background-color: rgba(255, 255, 255, 0.9);
-  box-shadow: 0 -2px 5px rgba(0,0,0,0.1);
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    text-align: center;
+    font-family: 'Indie Flower', cursive;
+    font-size: 14px;
+    padding: 10px 0;
+    background-color: rgba(255, 255, 255, 0.9);
+    box-shadow: 0 -2px 5px rgba(0,0,0,0.1);
   ">
-  Genç Kur'an Aşıkları 2025
+    Genç Kur'an Aşıkları 2025
   </footer>
-
-
 </body>
 </html>
